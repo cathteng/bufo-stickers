@@ -87,25 +87,6 @@ jobs:
         id: date
         run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
       
-      - name: Check if stickers changed
-        if: steps.check_cache.outputs.skip != 'true'
-        id: check_changes
-        run: |
-          if [ -n "$(git status --porcelain output/)" ]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
-      
-      - name: Commit and push sticker packs
-        if: steps.check_cache.outputs.skip != 'true' && steps.check_changes.outputs.changed == 'true'
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add output/
-          git commit -m "Update stickers - ${{ steps.date.outputs.date }} (source: ${{ steps.source_commit.outputs.sha }})"
-          git push
-      
       - name: Create or update release
         if: steps.check_cache.outputs.skip != 'true' && steps.check_changes.outputs.changed == 'true'
         uses: softprops/action-gh-release@v1
