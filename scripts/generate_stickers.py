@@ -131,17 +131,17 @@ def resize_animated_gif(image_path, output_path, size='medium'):
 def resize_image_for_sticker(image_path, output_path, size='medium'):
     """
     Resize and optimize an image for iOS stickers.
-    Handles both static images and animated GIFs.
+    Skips animated GIFs, only processes static images.
     
     Args:
         image_path: Path to source image
         output_path: Path to save processed image
         size: One of 'small', 'medium', 'large'
     """
-    # Check if it's an animated GIF
+    # Skip animated GIFs
     if is_animated_gif(image_path):
-        print(f"  🎬 Animated GIF detected - converting to APNG")
-        return resize_animated_gif(image_path, output_path, size)
+        print(f"  ⏭️  Skipping animated GIF")
+        return False
     
     # Process static image
     try:
