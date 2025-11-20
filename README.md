@@ -47,7 +47,7 @@ This repository automatically:
 
 1. **Monitors the source repository** - Checks all-the-bufo repository weekly for changes
 2. **Detects changes** - Only regenerates if new commits are detected (efficient!)
-3. **Processes images** - Converts static images to iOS sticker format (300-618px, optimized PNG)
+3. **Processes images** - Converts images to iOS sticker format (300-618px, optimized PNG/APNG for animations)
 4. **Generates sticker packs** - Creates properly formatted `.stickerpack` directories
 5. **Creates releases** - Automatically publishes new releases when stickers are updated
 6. **Provides downloads** - Makes sticker packs available as both artifacts and releases
@@ -63,10 +63,11 @@ The sticker packs are automatically regenerated:
 
 ### Image Processing
 - **Static images**: Resized to iOS sticker requirements (408x408px by default)
-- **Animated GIFs**: Skipped (only static stickers are generated)
+- **Animated GIFs**: Converted to APNG (Animated PNG) format - iOS supports this!
 - Transparent backgrounds are preserved
 - Images are optimized to stay under the 500KB limit
-- Output format: PNG with RGBA color mode
+- If animations are too large, frame count is automatically reduced
+- Output format: PNG/APNG with RGBA color mode
 
 ### File Structure
 ```
