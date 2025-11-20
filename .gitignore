@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Source repository (checked out during CI)
+source-repo/
+
+# Output artifacts (committed to repo for easy download)
+# output/ - sticker packs are committed
+# output/.source_commit - tracks last processed commit from source repo
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log
+
+NEXT_STEPS.md
+

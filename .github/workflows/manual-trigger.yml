@@ -1,0 +1,53 @@
+name: Manual Sticker Generation
+
+# This workflow can be manually triggered to regenerate stickers on demand
+on:
+  workflow_dispatch:
+    inputs:
+      sticker_size:
+        description: 'Sticker size to generate'
+        required: true
+        default: 'medium'
+        type: choice
+        options:
+          - small
+          - medium
+          - large
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+      
+      - name: Checkout all-the-bufo repository
+        uses: actions/checkout@v4
+        with:
+          repository: knobiknows/all-the-bufo
+          path: source-repo
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Generate sticker packs
+        run: |
+          python scripts/generate_stickers.py
+        env:
+          STICKER_SIZE: ${{ github.event.inputs.sticker_size }}
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-stickers-${{ github.event.inputs.sticker_size }}
+          path: output/
+          retention-days: 30
+

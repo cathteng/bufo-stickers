@@ -1,0 +1,138 @@
+name: Generate iOS Stickers
+
+on:
+  # Check for updates weekly
+  schedule:
+    - cron: '0 0 * * 0'  # Every Sunday at midnight UTC
+  # Allow manual trigger
+  workflow_dispatch:
+  # Also trigger via webhook if you set one up later
+  repository_dispatch:
+    types: [update-stickers]
+
+jobs:
+  generate-stickers:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Checkout all-the-bufo repository
+        uses: actions/checkout@v4
+        with:
+          repository: knobiknows/all-the-bufo
+          path: source-repo
+          fetch-depth: 1  # Only need latest commit
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install Pillow
+      
+      - name: Get source repo last commit
+        id: source_commit
+        run: |
+          cd source-repo
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "date=$(git log -1 --format=%cd --date=short)" >> $GITHUB_OUTPUT
+      
+      - name: Check if we need to regenerate
+        id: check_cache
+        run: |
+          if [ -f output/.source_commit ]; then
+            LAST_COMMIT=$(cat output/.source_commit)
+            if [ "$LAST_COMMIT" = "${{ steps.source_commit.outputs.sha }}" ]; then
+              echo "skip=true" >> $GITHUB_OUTPUT
+              echo "ℹ️ No changes detected in source repo since last run"
+            else
+              echo "skip=false" >> $GITHUB_OUTPUT
+              echo "✨ Changes detected! Will regenerate stickers"
+            fi
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "🆕 First run - will generate stickers"
+          fi
+      
+      - name: Generate sticker packs
+        if: steps.check_cache.outputs.skip != 'true'
+        run: |
+          python scripts/generate_stickers.py
+          # Save the source commit hash
+          echo "${{ steps.source_commit.outputs.sha }}" > output/.source_commit
+      
+      - name: Create release artifacts
+        if: steps.check_cache.outputs.skip != 'true'
+        run: |
+          cd output
+          # Create a zip file with all sticker packs
+          zip -r ios-stickers.zip *.stickerpack
+      
+      - name: Upload artifacts
+        if: steps.check_cache.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-stickers
+          path: output/ios-stickers.zip
+          retention-days: 90
+      
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+      
+      - name: Check if stickers changed
+        if: steps.check_cache.outputs.skip != 'true'
+        id: check_changes
+        run: |
+          if [ -n "$(git status --porcelain output/)" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Commit and push sticker packs
+        if: steps.check_cache.outputs.skip != 'true' && steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add output/
+          git commit -m "Update stickers - ${{ steps.date.outputs.date }} (source: ${{ steps.source_commit.outputs.sha }})"
+          git push
+      
+      - name: Create or update release
+        if: steps.check_cache.outputs.skip != 'true' && steps.check_changes.outputs.changed == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: latest-${{ steps.date.outputs.date }}
+          name: Bufo Stickers - ${{ steps.date.outputs.date }}
+          body: |
+            iOS Sticker Packs generated from [all-the-bufo](https://github.com/knobiknows/all-the-bufo)
+            
+            **Source commit**: `${{ steps.source_commit.outputs.sha }}`
+            
+            ## Download Instructions
+            1. Download the `ios-stickers.zip` file below
+            2. Extract the zip file
+            3. Transfer the `.stickerpack` folder(s) to your iOS device using AirDrop or Files app
+            4. Import into your favorite messaging app that supports custom stickers
+            
+            Last updated: ${{ steps.date.outputs.date }}
+          files: output/ios-stickers.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: No changes detected
+        if: steps.check_cache.outputs.skip == 'true'
+        run: |
+          echo "✅ Stickers are already up to date!"
+          echo "Source repo hasn't changed since last generation."
+
